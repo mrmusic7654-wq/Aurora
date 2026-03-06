@@ -1,0 +1,42 @@
+name: Build Iris Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Clone llama.cpp dependency
+        run: |
+          git clone https://github.com/ggerganov/llama.cpp
+          cd llama.cpp
+          git checkout 1f922254f0c984a8fb9fbaa0c390d7ffae49aedb
+          cd ..
+
+      - name: Grant gradlew permission
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iris-apk
+          path: app/build/outputs/apk/debug/*.apk
