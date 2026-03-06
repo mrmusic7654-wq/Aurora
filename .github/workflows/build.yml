@@ -13,11 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code with submodules
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-          fetch-depth: 0
+          path: Aurora  # Checkout to Aurora folder
+
+      - name: Clone llama.cpp
+        run: |
+          cd /home/runner/work/Aurora
+          git clone https://github.com/ggerganov/llama.cpp.git
+          cd llama.cpp
+          git checkout 1f922254f0c984a8fb9fbaa0c390d7ffae49aedb
+          ls -la  # Verify both folders exist
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -28,42 +35,17 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Use the correct path to cmdline-tools to install NDK
-      - name: Install correct NDK version
-        run: |
-          # Find the cmdline-tools path
-          SDK_MANAGER=$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
-          if [ ! -f "$SDK_MANAGER" ]; then
-            SDK_MANAGER=$ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager
-          fi
-          echo "Using SDK manager at: $SDK_MANAGER"
-          
-          # Accept licenses and install NDK
-          yes | $SDK_MANAGER --licenses
-          $SDK_MANAGER "ndk;26.1.10909125"
-          
-          # Set NDK path
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Grant execute permission
+        run: chmod +x Aurora/gradlew
+        working-directory: Aurora
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug --stacktrace
+        working-directory: Aurora
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: iris-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: Aurora/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
