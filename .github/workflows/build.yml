@@ -16,26 +16,34 @@ jobs:
       - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'  # CRITICAL: This fetches llama.cpp
+          submodules: 'recursive'
           fetch-depth: 0
 
-      - name: Set up JDK 17
+      # Step 1: Set up Java 8 for SDK Manager (Android tools need Java 8)
+      - name: Set up JDK 8 for SDK Manager
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          
+      # Step 2: Install NDK and CMake using Java 8
+      - name: Install NDK and CMake
+        run: |
+          echo "y" | ${ANDROID_HOME}/tools/bin/sdkmanager --install "ndk;26.1.10909125"
+          echo "y" | ${ANDROID_HOME}/tools/bin/sdkmanager --install "cmake;3.22.1"
+          
+      # Step 3: Switch to Java 17 for Gradle build
+      - name: Set up JDK 17 for Gradle
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
+          
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-
-      # CRITICAL: Install NDK and CMake
-      - name: Install NDK and CMake
-        run: |
-          echo "y" | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install "ndk;26.1.10909125"
-          echo "y" | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install "cmake;3.22.1"
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
