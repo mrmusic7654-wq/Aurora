@@ -5,44 +5,52 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'  # Important for llama.cpp submodule
-      
+          submodules: 'recursive'  # CRITICAL: This fetches llama.cpp
+          fetch-depth: 0
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      
+
+      # CRITICAL: Install NDK and CMake
+      - name: Install NDK and CMake
+        run: |
+          echo "y" | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install "ndk;26.1.10909125"
+          echo "y" | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install "cmake;3.22.1"
+
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/.android/build-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      
-      - name: Build Debug APK
+
+      - name: Build with Gradle
         run: ./gradlew assembleDebug --stacktrace
-      
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
