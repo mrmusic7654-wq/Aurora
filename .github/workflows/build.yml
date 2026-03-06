@@ -28,13 +28,22 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # NDK is already pre-installed on GitHub runners!
-      - name: Verify NDK installation
+      # Use the correct path to cmdline-tools to install NDK
+      - name: Install correct NDK version
         run: |
-          echo "Android SDK: $ANDROID_HOME"
-          ls -la $ANDROID_HOME/ndk/ || echo "NDK directory not found"
-          # GitHub runners have NDK 25.2.9519653 pre-installed
-          echo "NDK_VERSION=25.2.9519653" >> $GITHUB_ENV
+          # Find the cmdline-tools path
+          SDK_MANAGER=$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
+          if [ ! -f "$SDK_MANAGER" ]; then
+            SDK_MANAGER=$ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager
+          fi
+          echo "Using SDK manager at: $SDK_MANAGER"
+          
+          # Accept licenses and install NDK
+          yes | $SDK_MANAGER --licenses
+          $SDK_MANAGER "ndk;26.1.10909125"
+          
+          # Set NDK path
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
